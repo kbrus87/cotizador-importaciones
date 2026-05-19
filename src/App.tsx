@@ -1013,7 +1013,7 @@ function Field({
       <input
         type={type}
         step="any"
-        className="field-input w-full rounded-md border px-2 py-1.5 text-sm"
+        className={`field-input w-full rounded-md border px-2 py-1.5 text-sm ${type === "number" ? "text-right" : ""}`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -1038,7 +1038,7 @@ function CellInput({
       step="any"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={`cell-input rounded border bg-white px-1.5 py-1 text-xs ${className}`}
+      className={`cell-input rounded border bg-white px-1.5 py-1 text-xs ${type === "number" ? "text-right" : ""} ${className}`}
     />
   );
 }

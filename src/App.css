@@ -344,8 +344,13 @@ body {
 
 .quote-table .font-medium,
 .quote-table .font-bold {
+  text-align: right;
   font-size: 0.71rem;
   line-height: 1.25;
+}
+
+.quote-table tfoot .table-body-cell:not([colspan]) {
+  text-align: right;
 }
 
 .quote-table.meta-all .item-col {
@@ -431,6 +436,7 @@ body {
 }
 
 .tax-amount {
+  text-align: right;
   color: var(--brand-strong);
   font-size: 0.64rem;
   font-weight: 800;
@@ -521,6 +527,7 @@ body {
 }
 
 .summary-value {
+  text-align: right;
   font-weight: 800;
   color: var(--text);
 }
@@ -619,6 +626,10 @@ body {
 
 .text-lg {
   font-size: 1.15rem;
+}
+
+.text-right {
+  text-align: right;
 }
 
 .text-2xl {
