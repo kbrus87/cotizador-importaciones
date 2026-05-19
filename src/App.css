@@ -366,6 +366,10 @@ body {
   width: 20vw;
 }
 
+.quote-table .weight-col {
+  width: 4.5vw;
+}
+
 .item-cell {
   display: flex;
   flex-direction: column;

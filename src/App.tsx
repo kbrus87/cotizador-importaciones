@@ -20,6 +20,7 @@ type QuoteItem = {
   item: string;
   tipo: string;
   descripcion: string;
+  peso: number | string;
   cantidad: number | string;
   precioExw: number | string;
   derechoImportacionPct: number | string;
@@ -94,6 +95,7 @@ const emptyItem = (): QuoteItem => ({
   item: "",
   tipo: "",
   descripcion: "",
+  peso: 0,
   cantidad: 1,
   precioExw: 0,
   derechoImportacionPct: 0,
@@ -135,6 +137,7 @@ function normalizeItem(row: Partial<QuoteItem>): QuoteItem {
     item: row.item || "",
     tipo: row.tipo || "",
     descripcion: row.descripcion || "",
+    peso: row.peso ?? 0,
     cantidad: row.cantidad ?? 1,
     precioExw: row.precioExw ?? 0,
     derechoImportacionPct: row.derechoImportacionPct ?? 0,
@@ -253,6 +256,7 @@ function quoteToCsv(quote: Quote) {
     "Item",
     "Tipo",
     "Descripcion",
+    "Peso",
     "Cantidad",
     `Precio EXW Unitario (${currency})`,
     `EXW Total (${currency})`,
@@ -282,6 +286,7 @@ function quoteToCsv(quote: Quote) {
       row.item,
       row.tipo,
       row.descripcion,
+      row.peso,
       row.cantidad,
       convertMoney(c.exwUnitario, quote),
       convertMoney(c.exwTotal, quote),
@@ -352,6 +357,7 @@ function importCsvProducts(text: string): QuoteItem[] {
       item: get("item", "nombre"),
       tipo: get("tipo", "type"),
       descripcion: get("descripcion", "descripción", "description"),
+      peso: numberValue(get("peso", "kg", "peso kg")),
       precioExw: numberValue(get("precio exw", "precioexw", "exw", "precio exw unitario")),
       derechoImportacionPct: numberValue(
         get("% derecho importacion", "% derecho importación", "derecho importacion", "derecho importación")
@@ -418,6 +424,7 @@ export default function App() {
   const [showCurrencyDialog, setShowCurrencyDialog] = useState(false);
   const [showTipo, setShowTipo] = useState(true);
   const [showDescripcion, setShowDescripcion] = useState(true);
+  const [showPeso, setShowPeso] = useState(false);
 
   useEffect(() => {
     try {
@@ -559,7 +566,7 @@ export default function App() {
 
   const currency = displayCurrency(quote);
   const printReport = () => window.print();
-  const leadingTotalColumns = 3 + (showTipo ? 1 : 0) + (showDescripcion ? 1 : 0);
+  const leadingTotalColumns = 3 + (showTipo ? 1 : 0) + (showDescripcion ? 1 : 0) + (showPeso ? 1 : 0);
   const metaLayoutClass = showTipo && showDescripcion ? "meta-all" : showTipo ? "meta-item-tipo" : showDescripcion ? "meta-item-desc" : "meta-item-only";
 
   return (
@@ -674,6 +681,9 @@ export default function App() {
                   <Button variant={showDescripcion ? "outline" : "ghost"} size="sm" onClick={() => setShowDescripcion((v) => !v)}>
                     {showDescripcion ? "Ocultar desc." : "Ver desc."}
                   </Button>
+                  <Button variant={showPeso ? "outline" : "ghost"} size="sm" onClick={() => setShowPeso((v) => !v)}>
+                    {showPeso ? "Ocultar peso" : "Ver peso"}
+                  </Button>
                 <Button onClick={() => addRow()}>
                   <Plus className="mr-2 h-4 w-4" /> Agregar renglón
                 </Button>
@@ -687,6 +697,7 @@ export default function App() {
                       <Th className="item-col">Item</Th>
                       {showTipo && <Th className="type-col">Tipo</Th>}
                       {showDescripcion && <Th className="desc-col">Descripci??n</Th>}
+                      {showPeso && <Th className="weight-col">Peso kg</Th>}
                       <Th>Cant.</Th>
                       <Th>EXW unit. USD</Th>
                       <Th>Flete</Th>
@@ -734,6 +745,11 @@ export default function App() {
                           {showDescripcion && (
                             <Td className="desc-col">
                               <CellInput value={row.descripcion} onChange={(v) => updateItem(row.id, "descripcion", v)} className="w-72" />
+                            </Td>
+                          )}
+                          {showPeso && (
+                            <Td className="weight-col">
+                              <CellInput type="number" value={row.peso} onChange={(v) => updateItem(row.id, "peso", v)} className="w-20" />
                             </Td>
                           )}
                           <Td>
