@@ -651,12 +651,12 @@ export default function App() {
             <Field label="Flete global USD" type="number" value={quote.fleteTotal} onChange={(v) => updateQuote({ fleteTotal: v })} />
             <Field label="Seguro global USD" type="number" value={quote.seguroTotal} onChange={(v) => updateQuote({ seguroTotal: v })} />
             <Field label="Fecha" type="date" value={quote.fecha} onChange={(v) => updateQuote({ fecha: v })} />
-            <div className="md:col-span-5">
+            <div className="notes-field md:col-span-6">
               <label className="text-xs font-semibold text-slate-500">Notas</label>
               <textarea
-                className="min-h-16 w-full rounded-md border px-2 py-1 text-sm"
+                className="notes-textarea min-h-16 w-full rounded-md border px-2 py-1 text-sm"
                 value={quote.notas}
-                onChange={(e) => updateQuote({ notas: e.target.value })}
+                readOnly
               />
             </div>
           </CardContent>

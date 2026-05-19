@@ -270,6 +270,23 @@ body {
   resize: vertical;
 }
 
+.notes-field {
+  grid-column: 1 / -1;
+}
+
+.notes-textarea {
+  min-height: 74px;
+  resize: none;
+  line-height: 1.55;
+  color: var(--muted);
+  background: rgba(242, 234, 219, 0.55);
+}
+
+.notes-textarea[readonly] {
+  cursor: default;
+  border-style: dashed;
+}
+
 .quote-table-wrap {
   border: 1px solid var(--line);
   border-radius: 22px;
