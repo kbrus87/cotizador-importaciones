@@ -248,6 +248,16 @@ body {
   font-size: 0.96rem;
 }
 
+.quote-app input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.quote-app input[type="number"]::-webkit-outer-spin-button,
+.quote-app input[type="number"]::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
 .cell-input {
   min-height: 38px;
   padding: 0.5rem 0.6rem;
