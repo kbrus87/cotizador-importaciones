@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import {
+  CheckCircle2,
   Copy,
   Database,
   Download,
@@ -425,6 +426,8 @@ export default function App() {
   const [showTipo, setShowTipo] = useState(true);
   const [showDescripcion, setShowDescripcion] = useState(true);
   const [showPeso, setShowPeso] = useState(false);
+  const [saveToastTick, setSaveToastTick] = useState(0);
+  const [showSaveToast, setShowSaveToast] = useState(false);
 
   useEffect(() => {
     try {
@@ -438,6 +441,14 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(productDb));
   }, [productDb]);
+
+  useEffect(() => {
+    if (!saveToastTick) return;
+
+    setShowSaveToast(true);
+    const timeoutId = window.setTimeout(() => setShowSaveToast(false), 1400);
+    return () => window.clearTimeout(timeoutId);
+  }, [saveToastTick]);
 
   const itemCalcs = useMemo(() => calcQuoteItems(quote), [quote]);
 
@@ -516,6 +527,8 @@ export default function App() {
       if (exists) return db.map((p) => (p.item.trim().toLowerCase() === key ? clean : p));
       return [...db, clean].sort((a, b) => a.item.localeCompare(b.item));
     });
+
+    setSaveToastTick((tick) => tick + 1);
   };
 
   const loadQuoteFile = async (file?: File) => {
@@ -823,6 +836,21 @@ export default function App() {
                   </tfoot>
                 </table>
               </div>
+
+              <div className="quote-section-actions quote-section-actions-bottom no-print">
+                <Button variant={showTipo ? "outline" : "ghost"} size="sm" onClick={() => setShowTipo((v) => !v)}>
+                  {showTipo ? "Ocultar tipo" : "Ver tipo"}
+                </Button>
+                <Button variant={showDescripcion ? "outline" : "ghost"} size="sm" onClick={() => setShowDescripcion((v) => !v)}>
+                  {showDescripcion ? "Ocultar desc." : "Ver desc."}
+                </Button>
+                <Button variant={showPeso ? "outline" : "ghost"} size="sm" onClick={() => setShowPeso((v) => !v)}>
+                  {showPeso ? "Ocultar peso" : "Ver peso"}
+                </Button>
+                <Button onClick={() => addRow()}>
+                  <Plus className="mr-2 h-4 w-4" /> Agregar renglón
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -907,6 +935,11 @@ export default function App() {
             </Card>
           </aside>
         </div>
+      </div>
+
+      <div className={`save-toast no-print ${showSaveToast ? "is-visible" : ""}`} aria-live="polite" aria-hidden={!showSaveToast}>
+        <CheckCircle2 className="h-4 w-4" />
+        <span>Guardado</span>
       </div>
 
       {showCurrencyDialog && (
