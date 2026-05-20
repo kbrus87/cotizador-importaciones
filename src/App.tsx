@@ -47,6 +47,7 @@ type Quote = {
   tipoCambio: number | string;
   fleteTotal: number | string;
   seguroTotal: number | string;
+  honorariosAgenteTotal: number | string;
   fecha: string;
   observaciones: string;
   items: QuoteItem[];
@@ -66,6 +67,7 @@ type ItemCalc = {
   exwTotal: number;
   flete: number;
   seguro: number;
+  honorariosAgente: number;
   cif: number;
   derechoImportacion: number;
   tasaEstadistica: number;
@@ -163,6 +165,7 @@ const defaultQuote = (): Quote => ({
   tipoCambio: 1000,
   fleteTotal: 0,
   seguroTotal: 0,
+  honorariosAgenteTotal: 0,
   fecha: new Date().toISOString().slice(0, 10),
   observaciones: "",
   items: [emptyItem()],
@@ -216,6 +219,7 @@ function normalizeQuote(data: Partial<Quote>): Quote {
     tipoCambio: data.tipoCambio || 1000,
     fleteTotal: inferredFleteTotal,
     seguroTotal: inferredSeguroTotal,
+    honorariosAgenteTotal: data.honorariosAgenteTotal ?? 0,
     items: Array.isArray(data.items) && data.items.length > 0 ? data.items.map(normalizeItem) : [emptyItem()],
   };
 }
@@ -233,7 +237,7 @@ function shown(valueUsd: number, quote: Quote): string {
   return money(convertMoney(valueUsd, quote));
 }
 
-function calcItem(row: QuoteItem, flete: number, seguro: number): ItemCalc {
+function calcItem(row: QuoteItem, flete: number, seguro: number, honorariosAgente: number): ItemCalc {
   const cantidad = numberValue(row.cantidad);
   const exwUnitario = numberValue(row.precioExw);
 
@@ -248,7 +252,7 @@ function calcItem(row: QuoteItem, flete: number, seguro: number): ItemCalc {
   const ganancias = baseIva * pct(row.gananciasPct);
   const iibb = baseIva * pct(row.iibbPct);
 
-  const total = baseIva + iva + ivaAdicional + ganancias + iibb;
+  const total = baseIva + iva + ivaAdicional + ganancias + iibb + honorariosAgente;
   const unitario = cantidad > 0 ? total / cantidad : 0;
 
   return {
@@ -257,6 +261,7 @@ function calcItem(row: QuoteItem, flete: number, seguro: number): ItemCalc {
     exwTotal,
     flete,
     seguro,
+    honorariosAgente,
     cif,
     derechoImportacion,
     tasaEstadistica,
@@ -276,10 +281,11 @@ function calcQuoteItems(quote: Quote): ItemCalc[] {
   const grandExwTotal = exwTotals.reduce((sum, value) => sum + value, 0);
   const totalFlete = numberValue(quote.fleteTotal);
   const totalSeguro = numberValue(quote.seguroTotal);
+  const totalHonorariosAgente = numberValue(quote.honorariosAgenteTotal);
 
   return quote.items.map((row, index) => {
     const ratio = grandExwTotal > 0 ? exwTotals[index] / grandExwTotal : 1 / itemCount;
-    return calcItem(row, totalFlete * ratio, totalSeguro * ratio);
+    return calcItem(row, totalFlete * ratio, totalSeguro * ratio, totalHonorariosAgente * ratio);
   });
 }
 
@@ -326,6 +332,7 @@ function quoteToCsv(quote: Quote) {
     `Ganancias (${currency})`,
     "% IIBB",
     `IIBB (${currency})`,
+    `Honorarios Agente Aduana (${currency})`,
     `Total Item (${currency})`,
     `Costo Unitario Final (${currency})`,
   ];
@@ -356,6 +363,7 @@ function quoteToCsv(quote: Quote) {
       convertMoney(c.ganancias, quote),
       row.iibbPct,
       convertMoney(c.iibb, quote),
+      convertMoney(c.honorariosAgente, quote),
       convertMoney(c.total, quote),
       convertMoney(c.unitario, quote),
     ];
@@ -475,6 +483,10 @@ export default function App() {
   const [showTipo, setShowTipo] = useState(true);
   const [showDescripcion, setShowDescripcion] = useState(true);
   const [showPeso, setShowPeso] = useState(false);
+  const [showFleteCol, setShowFleteCol] = useState(true);
+  const [showSeguroCol, setShowSeguroCol] = useState(true);
+  const [showBaseIvaCol, setShowBaseIvaCol] = useState(true);
+  const [showHonorariosAgenteCol, setShowHonorariosAgenteCol] = useState(true);
   const [saveToastTick, setSaveToastTick] = useState(0);
   const [showSaveToast, setShowSaveToast] = useState(false);
 
@@ -516,6 +528,7 @@ export default function App() {
         acc.exwTotal += c.exwTotal;
         acc.flete += c.flete;
         acc.seguro += c.seguro;
+        acc.honorariosAgente += c.honorariosAgente;
         acc.cif += c.cif;
         acc.derechoImportacion += c.derechoImportacion;
         acc.tasaEstadistica += c.tasaEstadistica;
@@ -531,6 +544,7 @@ export default function App() {
         exwTotal: 0,
         flete: 0,
         seguro: 0,
+        honorariosAgente: 0,
         cif: 0,
         derechoImportacion: 0,
         tasaEstadistica: 0,
@@ -730,6 +744,7 @@ export default function App() {
             <p className="text-sm text-slate-600">
               Los valores base se guardan en USD. La conversión a ARS afecta solo visualización, CSV e impresión.
             </p>
+            <p className="quote-app-notes text-sm text-slate-600">{APP_NOTES}</p>
             </div>
           </div>
 
@@ -808,9 +823,15 @@ export default function App() {
                     <h2 className="report-title">{quote.nombre || "CotizaciÃ³n sin nombre"}</h2>
                   </div>
                 </div>
-                <div className="report-meta-date">
-                  <span className="report-meta-label">Fecha</span>
-                  <strong>{quote.fecha || "-"}</strong>
+                <div className="report-meta-side">
+                  <div className="report-meta-date">
+                    <span className="report-meta-label">Fecha</span>
+                    <strong>{quote.fecha || "-"}</strong>
+                  </div>
+                  <div className="report-inline-notes">
+                    <span className="report-meta-label">Notas</span>
+                    <p>{APP_NOTES}</p>
+                  </div>
                 </div>
               </div>
 
@@ -822,13 +843,9 @@ export default function App() {
                 <ReportField label="Volumen" value={`${quote.volumen || 0} m³`} />
                 <ReportField label="Peso total con packing" value={`${quote.pesoTotalPacking || 0} kg`} />
                 <ReportField label="Moneda" value={quote.monedaVisual} />
-                <ReportField label="Flete global" value={`${currency} ${shown(numberValue(quote.fleteTotal), quote)}`} />
-                <ReportField label="Seguro global" value={`${currency} ${shown(numberValue(quote.seguroTotal), quote)}`} />
-                <ReportField label="Tipo de cambio" value={`ARS ${money(quote.tipoCambio)}`} />
                 {quote.observaciones.trim() && (
                   <ReportField label="Observaciones" value={quote.observaciones} className="report-field-notes" />
                 )}
-                <ReportField label="Notas" value={APP_NOTES} className="report-field-notes" />
               </div>
             </CardContent>
           </Card>
@@ -860,6 +877,12 @@ export default function App() {
             </div>
             <Field label="Flete global USD" type="number" value={quote.fleteTotal} onChange={(v) => updateQuote({ fleteTotal: v })} />
             <Field label="Seguro global USD" type="number" value={quote.seguroTotal} onChange={(v) => updateQuote({ seguroTotal: v })} />
+            <Field
+              label="Honorarios agente aduana USD"
+              type="number"
+              value={quote.honorariosAgenteTotal}
+              onChange={(v) => updateQuote({ honorariosAgenteTotal: v })}
+            />
             <Field label="Fecha" type="date" value={quote.fecha} onChange={(v) => updateQuote({ fecha: v })} />
             <div className="notes-field md:col-span-6">
               <label className="text-xs font-semibold text-slate-500">Observaciones</label>
@@ -868,10 +891,6 @@ export default function App() {
                 value={quote.observaciones}
                 onChange={(e) => updateQuote({ observaciones: e.target.value })}
               />
-            </div>
-            <div className="notes-field md:col-span-6">
-              <label className="text-xs font-semibold text-slate-500">Notas</label>
-              <textarea className="notes-textarea min-h-16 w-full rounded-md border px-2 py-1 text-sm" value={APP_NOTES} readOnly />
             </div>
           </CardContent>
         </Card>
@@ -891,6 +910,22 @@ export default function App() {
                   <Button variant={showPeso ? "outline" : "ghost"} size="sm" onClick={() => setShowPeso((v) => !v)}>
                     {showPeso ? "Ocultar peso" : "Ver peso"}
                   </Button>
+                  <Button variant={showFleteCol ? "outline" : "ghost"} size="sm" onClick={() => setShowFleteCol((v) => !v)}>
+                    {showFleteCol ? "Ocultar flete" : "Ver flete"}
+                  </Button>
+                  <Button variant={showSeguroCol ? "outline" : "ghost"} size="sm" onClick={() => setShowSeguroCol((v) => !v)}>
+                    {showSeguroCol ? "Ocultar seguro" : "Ver seguro"}
+                  </Button>
+                  <Button variant={showBaseIvaCol ? "outline" : "ghost"} size="sm" onClick={() => setShowBaseIvaCol((v) => !v)}>
+                    {showBaseIvaCol ? "Ocultar Base IVA" : "Ver Base IVA"}
+                  </Button>
+                  <Button
+                    variant={showHonorariosAgenteCol ? "outline" : "ghost"}
+                    size="sm"
+                    onClick={() => setShowHonorariosAgenteCol((v) => !v)}
+                  >
+                    {showHonorariosAgenteCol ? "Ocultar hon. agente" : "Ver hon. agente"}
+                  </Button>
                 <Button onClick={() => addRow()}>
                   <Plus className="mr-2 h-4 w-4" /> Agregar renglón
                 </Button>
@@ -907,16 +942,17 @@ export default function App() {
                       {showPeso && <Th className="weight-col">Peso kg</Th>}
                       <Th className="col-qty">Cant.</Th>
                       <Th className="col-money">EXW</Th>
-                      <Th className="col-money">Flete</Th>
-                      <Th className="col-money">Seguro</Th>
+                      <Th className={showFleteCol ? "col-money" : "col-money print-only"}>Flete</Th>
+                      <Th className={showSeguroCol ? "col-money" : "col-money print-only"}>Seguro</Th>
                       <Th className="col-money">CIF</Th>
                       <Th className="col-tax">DIE</Th>
                       <Th className="col-tax">TE</Th>
-                      <Th className="col-money">Base IVA</Th>
+                      <Th className={showBaseIvaCol ? "col-money" : "col-money print-only"}>Base IVA</Th>
                       <Th className="col-tax">IVA</Th>
                       <Th className="col-tax">IVA ad.</Th>
                       <Th className="col-tax">Gan.</Th>
                       <Th className="col-tax">IIBB</Th>
+                      <Th className={showHonorariosAgenteCol ? "col-money" : "col-money print-only"}>Hon. ag.</Th>
                       <Th className="col-total">Total {currency}</Th>
                       <Th className="col-total">Unit. final {currency}</Th>
                     </tr>
@@ -970,8 +1006,8 @@ export default function App() {
                           <Td className="col-money">
                             <CellInput type="number" value={row.precioExw} onChange={(v) => updateItem(row.id, "precioExw", v)} className="w-24" />
                           </Td>
-                          <Td className="col-money font-medium">{shown(c.flete, quote)}</Td>
-                          <Td className="col-money font-medium">{shown(c.seguro, quote)}</Td>
+                          <Td className={showFleteCol ? "col-money font-medium" : "col-money font-medium print-only"}>{shown(c.flete, quote)}</Td>
+                          <Td className={showSeguroCol ? "col-money font-medium" : "col-money font-medium print-only"}>{shown(c.seguro, quote)}</Td>
                           <Td className="col-money font-medium">{shown(c.cif, quote)}</Td>
                           <Td className="col-tax">
                             <TaxCell
@@ -987,7 +1023,7 @@ export default function App() {
                               onChange={(v) => updateItem(row.id, "tasaEstadisticaPct", v)}
                             />
                           </Td>
-                          <Td className="col-money font-medium">{shown(c.baseIva, quote)}</Td>
+                          <Td className={showBaseIvaCol ? "col-money font-medium" : "col-money font-medium print-only"}>{shown(c.baseIva, quote)}</Td>
                           <Td className="col-tax">
                             <TaxCell pctValue={row.ivaPct} amount={shown(c.iva, quote)} onChange={(v) => updateItem(row.id, "ivaPct", v)} />
                           </Td>
@@ -1008,6 +1044,9 @@ export default function App() {
                           <Td className="col-tax">
                             <TaxCell pctValue={row.iibbPct} amount={shown(c.iibb, quote)} onChange={(v) => updateItem(row.id, "iibbPct", v)} />
                           </Td>
+                          <Td className={showHonorariosAgenteCol ? "col-money font-medium" : "col-money font-medium print-only"}>
+                            {shown(c.honorariosAgente, quote)}
+                          </Td>
                           <Td className="col-total font-bold">{shown(c.total, quote)}</Td>
                           <Td className="col-total font-bold">{shown(c.unitario, quote)}</Td>
 
@@ -1019,16 +1058,17 @@ export default function App() {
                   <tfoot>
                     <tr className="bg-slate-100 font-bold no-print">
                       <Td colSpan={leadingTotalColumns}>Totales</Td>
-                      <Td>{shown(totals.flete, quote)}</Td>
-                      <Td>{shown(totals.seguro, quote)}</Td>
+                      {showFleteCol && <Td>{shown(totals.flete, quote)}</Td>}
+                      {showSeguroCol && <Td>{shown(totals.seguro, quote)}</Td>}
                       <Td>{shown(totals.cif, quote)}</Td>
                       <Td>{shown(totals.derechoImportacion, quote)}</Td>
                       <Td>{shown(totals.tasaEstadistica, quote)}</Td>
-                      <Td>{shown(totals.baseIva, quote)}</Td>
+                      {showBaseIvaCol && <Td>{shown(totals.baseIva, quote)}</Td>}
                       <Td>{shown(totals.iva, quote)}</Td>
                       <Td>{shown(totals.ivaAdicional, quote)}</Td>
                       <Td>{shown(totals.ganancias, quote)}</Td>
                       <Td>{shown(totals.iibb, quote)}</Td>
+                      {showHonorariosAgenteCol && <Td>{shown(totals.honorariosAgente, quote)}</Td>}
                       <Td>{shown(totals.total, quote)}</Td>
                       <Td></Td>
                     </tr>
@@ -1044,6 +1084,7 @@ export default function App() {
                       <Td>{shown(totals.ivaAdicional, quote)}</Td>
                       <Td>{shown(totals.ganancias, quote)}</Td>
                       <Td>{shown(totals.iibb, quote)}</Td>
+                      <Td>{shown(totals.honorariosAgente, quote)}</Td>
                       <Td>{shown(totals.total, quote)}</Td>
                       <Td></Td>
                     </tr>
@@ -1060,6 +1101,22 @@ export default function App() {
                 </Button>
                 <Button variant={showPeso ? "outline" : "ghost"} size="sm" onClick={() => setShowPeso((v) => !v)}>
                   {showPeso ? "Ocultar peso" : "Ver peso"}
+                </Button>
+                <Button variant={showFleteCol ? "outline" : "ghost"} size="sm" onClick={() => setShowFleteCol((v) => !v)}>
+                  {showFleteCol ? "Ocultar flete" : "Ver flete"}
+                </Button>
+                <Button variant={showSeguroCol ? "outline" : "ghost"} size="sm" onClick={() => setShowSeguroCol((v) => !v)}>
+                  {showSeguroCol ? "Ocultar seguro" : "Ver seguro"}
+                </Button>
+                <Button variant={showBaseIvaCol ? "outline" : "ghost"} size="sm" onClick={() => setShowBaseIvaCol((v) => !v)}>
+                  {showBaseIvaCol ? "Ocultar Base IVA" : "Ver Base IVA"}
+                </Button>
+                <Button
+                  variant={showHonorariosAgenteCol ? "outline" : "ghost"}
+                  size="sm"
+                  onClick={() => setShowHonorariosAgenteCol((v) => !v)}
+                >
+                  {showHonorariosAgenteCol ? "Ocultar hon. agente" : "Ver hon. agente"}
                 </Button>
                 <Button onClick={() => addRow()}>
                   <Plus className="mr-2 h-4 w-4" /> Agregar renglón
@@ -1080,6 +1137,7 @@ export default function App() {
                 <Summary label="EXW total" value={shown(totals.exwTotal, quote)} moneda={currency} />
                 <Summary label="Flete" value={shown(totals.flete, quote)} moneda={currency} />
                 <Summary label="Seguro" value={shown(totals.seguro, quote)} moneda={currency} />
+                <Summary label="Honorarios agente" value={shown(totals.honorariosAgente, quote)} moneda={currency} />
                 <Summary label="CIF" value={shown(totals.cif, quote)} moneda={currency} />
                 <Summary label="Derecho importaciÃ³n" value={shown(totals.derechoImportacion, quote)} moneda={currency} />
                 <Summary label="Tasa estadÃ­stica" value={shown(totals.tasaEstadistica, quote)} moneda={currency} />
@@ -1163,6 +1221,7 @@ export default function App() {
                 <Summary label="EXW total" value={shown(totals.exwTotal, quote)} moneda={currency} />
                 <Summary label="Flete" value={shown(totals.flete, quote)} moneda={currency} />
                 <Summary label="Seguro" value={shown(totals.seguro, quote)} moneda={currency} />
+                <Summary label="Honorarios agente" value={shown(totals.honorariosAgente, quote)} moneda={currency} />
                 <Summary label="CIF" value={shown(totals.cif, quote)} moneda={currency} />
                 <Summary label="Derecho importación" value={shown(totals.derechoImportacion, quote)} moneda={currency} />
                 <Summary label="Tasa estadística" value={shown(totals.tasaEstadistica, quote)} moneda={currency} />
