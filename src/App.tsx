@@ -108,6 +108,15 @@ function formatSavedAt(savedAt: string): string {
   }).format(parsed);
 }
 
+function fileSafeSegment(value: string, fallback: string): string {
+  const cleaned = value
+    .trim()
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "")
+    .replace(/\s+/g, " ");
+
+  return cleaned || fallback;
+}
+
 const money = (n: number | string | undefined | null) =>
   new Intl.NumberFormat("es-AR", {
     minimumFractionDigits: 2,
@@ -662,7 +671,28 @@ export default function App() {
         .filter(Boolean)
         .join(" - ")
     : "Calculadora de importación";
-  const printReport = () => window.print();
+  const printReport = () => {
+    const previousTitle = document.title;
+    const printTitle = [
+      fileSafeSegment(quote.nombre, "Cotizacion"),
+      fileSafeSegment(quote.proveedor, "Sin proveedor"),
+      formatSavedAt(quote.savedAt || quote.fecha) || quote.fecha || new Date().toISOString().slice(0, 10),
+    ].join(" - ");
+
+    document.title = printTitle;
+
+    const restoreTitle = () => {
+      document.title = previousTitle;
+      window.removeEventListener("afterprint", restoreTitle);
+    };
+
+    window.addEventListener("afterprint", restoreTitle);
+    window.print();
+
+    window.setTimeout(() => {
+      restoreTitle();
+    }, 1000);
+  };
   const leadingTotalColumns = 3 + (showTipo ? 1 : 0) + (showDescripcion ? 1 : 0) + (showPeso ? 1 : 0);
   const printLeadingTotalColumns = 3 + (showPeso ? 1 : 0);
   const metaLayoutClass = showTipo && showDescripcion ? "meta-all" : showTipo ? "meta-item-tipo" : showDescripcion ? "meta-item-desc" : "meta-item-only";
