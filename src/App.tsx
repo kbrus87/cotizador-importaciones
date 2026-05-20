@@ -40,6 +40,7 @@ type Quote = {
   destino: string;
   volumen: number | string;
   pesoTotalPacking: number | string;
+  savedAt: string;
   logoDataUrl: string;
   monedaBase: "USD";
   monedaVisual: Currency;
@@ -94,6 +95,19 @@ function getStoredLogo(): string {
   }
 }
 
+function formatSavedAt(savedAt: string): string {
+  if (!savedAt) return "";
+
+  const parsed = new Date(savedAt);
+  if (Number.isNaN(parsed.getTime())) return savedAt;
+
+  return new Intl.DateTimeFormat("es-AR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(parsed);
+}
+
 const money = (n: number | string | undefined | null) =>
   new Intl.NumberFormat("es-AR", {
     minimumFractionDigits: 2,
@@ -133,6 +147,7 @@ const defaultQuote = (): Quote => ({
   destino: "Argentina",
   volumen: 0,
   pesoTotalPacking: 0,
+  savedAt: "",
   logoDataUrl: getStoredLogo(),
   monedaBase: "USD",
   monedaVisual: "USD",
@@ -184,6 +199,7 @@ function normalizeQuote(data: Partial<Quote>): Quote {
     id: data.id || uid(),
     volumen: data.volumen ?? 0,
     pesoTotalPacking: data.pesoTotalPacking ?? 0,
+    savedAt: typeof data.savedAt === "string" ? data.savedAt : "",
     logoDataUrl: data.logoDataUrl || base.logoDataUrl,
     observaciones: typeof data.observaciones === "string" ? data.observaciones : "",
     monedaBase: "USD",
@@ -521,6 +537,12 @@ export default function App() {
 
   const updateQuote = (patch: Partial<Quote>) => setQuote((q) => ({ ...q, ...patch }));
 
+  const markQuoteAsSaved = (baseQuote: Quote) => {
+    const savedQuote = { ...baseQuote, savedAt: new Date().toISOString() };
+    setQuote(savedQuote);
+    return savedQuote;
+  };
+
   const updateItem = (id: string, field: keyof QuoteItem, value: string) => {
     setQuote((q) => ({
       ...q,
@@ -598,7 +620,7 @@ export default function App() {
       if (data.app !== "import-quote-calculator" || !data.quote || !Array.isArray(data.productDb)) {
         throw new Error("Archivo de trabajo inválido");
       }
-      setQuote(normalizeQuote(data.quote));
+      setQuote(normalizeQuote({ ...data.quote, savedAt: data.quote.savedAt || data.exportedAt || "" }));
       setProductDb(data.productDb.map(normalizeItem));
     } catch (error) {
       alert(error instanceof Error ? error.message : "No se pudo abrir el archivo de trabajo.");
@@ -635,6 +657,11 @@ export default function App() {
   });
 
   const currency = displayCurrency(quote);
+  const headerTitle = quote.savedAt
+    ? [quote.nombre.trim() || "Cotización", quote.proveedor.trim() || "Sin proveedor", formatSavedAt(quote.savedAt)]
+        .filter(Boolean)
+        .join(" - ")
+    : "Calculadora de importación";
   const printReport = () => window.print();
   const leadingTotalColumns = 3 + (showTipo ? 1 : 0) + (showDescripcion ? 1 : 0) + (showPeso ? 1 : 0);
   const printLeadingTotalColumns = 3 + (showPeso ? 1 : 0);
@@ -669,7 +696,7 @@ export default function App() {
               )}
             </div>
             <div className="quote-brand-copy">
-            <h1 className="text-2xl font-bold tracking-tight">Calculadora de importación</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{headerTitle}</h1>
             <p className="text-sm text-slate-600">
               Los valores base se guardan en USD. La conversión a ARS afecta solo visualización, CSV e impresión.
             </p>
@@ -694,19 +721,23 @@ export default function App() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => downloadFile(`${quote.nombre || "cotizacion"}.json`, JSON.stringify(quote, null, 2), "application/json")}
+              onClick={() => {
+                const savedQuote = markQuoteAsSaved(quote);
+                downloadFile(`${savedQuote.nombre || "cotizacion"}.json`, JSON.stringify(savedQuote, null, 2), "application/json");
+              }}
             >
               <Download className="mr-2 h-4 w-4" /> Guardar cotización
             </Button>
             <Button
               variant="outline"
-              onClick={() =>
+              onClick={() => {
+                const savedQuote = markQuoteAsSaved(quote);
                 downloadFile(
-                  `${quote.nombre || "cotizacion"}-con-db.json`,
-                  JSON.stringify(makeWorkspace(quote, productDb), null, 2),
+                  `${savedQuote.nombre || "cotizacion"}-con-db.json`,
+                  JSON.stringify(makeWorkspace(savedQuote, productDb), null, 2),
                   "application/json"
-                )
-              }
+                );
+              }}
             >
               <Database className="mr-2 h-4 w-4" /> Guardar app + DB
             </Button>
