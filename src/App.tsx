@@ -38,6 +38,8 @@ type Quote = {
   proveedor: string;
   origen: string;
   destino: string;
+  volumen: number | string;
+  pesoTotalPacking: number | string;
   logoDataUrl: string;
   monedaBase: "USD";
   monedaVisual: Currency;
@@ -45,7 +47,7 @@ type Quote = {
   fleteTotal: number | string;
   seguroTotal: number | string;
   fecha: string;
-  notas: string;
+  observaciones: string;
   items: QuoteItem[];
 };
 
@@ -76,6 +78,21 @@ type ItemCalc = {
 };
 
 const STORAGE_KEY = "importQuoteProductDb.v1";
+const LOGO_STORAGE_KEY = "importQuoteLogo.v1";
+const APP_NOTES = `Base de cálculo: CIF = EXW + flete internacional + seguro.
+Derecho de importación y tasa estadística sobre CIF.
+Base IVA = CIF + Derecho de Importación + Tasa Estadística
+IVA, IVA adicional, Ganancias e IIBB sobre Base IVA`;
+
+function getStoredLogo(): string {
+  if (typeof window === "undefined") return "";
+
+  try {
+    return localStorage.getItem(LOGO_STORAGE_KEY) || "";
+  } catch {
+    return "";
+  }
+}
 
 const money = (n: number | string | undefined | null) =>
   new Intl.NumberFormat("es-AR", {
@@ -114,18 +131,16 @@ const defaultQuote = (): Quote => ({
   proveedor: "",
   origen: "China",
   destino: "Argentina",
-  logoDataUrl: "",
+  volumen: 0,
+  pesoTotalPacking: 0,
+  logoDataUrl: getStoredLogo(),
   monedaBase: "USD",
   monedaVisual: "USD",
   tipoCambio: 1000,
   fleteTotal: 0,
   seguroTotal: 0,
   fecha: new Date().toISOString().slice(0, 10),
-  notas:
-    `Base de cálculo: CIF = EXW + flete internacional + seguro. 
-    Derecho de importación y tasa estadística sobre CIF. 
-    Base IVA = CIF + Derecho de Importación + Tasa Estadística
-    IVA, IVA adicional, Ganancias e IIBB sobre Base IVA`,
+  observaciones: "",
   items: [emptyItem()],
 });
 
@@ -167,7 +182,10 @@ function normalizeQuote(data: Partial<Quote>): Quote {
     ...base,
     ...data,
     id: data.id || uid(),
-    logoDataUrl: data.logoDataUrl || "",
+    volumen: data.volumen ?? 0,
+    pesoTotalPacking: data.pesoTotalPacking ?? 0,
+    logoDataUrl: data.logoDataUrl || base.logoDataUrl,
+    observaciones: typeof data.observaciones === "string" ? data.observaciones : "",
     monedaBase: "USD",
     monedaVisual: data.monedaVisual || "USD",
     tipoCambio: data.tipoCambio || 1000,
@@ -447,6 +465,15 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(productDb));
   }, [productDb]);
+
+  useEffect(() => {
+    try {
+      if (quote.logoDataUrl) localStorage.setItem(LOGO_STORAGE_KEY, quote.logoDataUrl);
+      else localStorage.removeItem(LOGO_STORAGE_KEY);
+    } catch {
+      // Ignore localStorage write issues for the logo cache.
+    }
+  }, [quote.logoDataUrl]);
 
   useEffect(() => {
     if (!saveToastTick) return;
@@ -731,11 +758,16 @@ export default function App() {
                 <ReportField label="Proveedor" value={quote.proveedor} />
                 <ReportField label="Origen" value={quote.origen} />
                 <ReportField label="Destino" value={quote.destino} />
+                <ReportField label="Volumen" value={`${quote.volumen || 0} m³`} />
+                <ReportField label="Peso total con packing" value={`${quote.pesoTotalPacking || 0} kg`} />
                 <ReportField label="Moneda" value={quote.monedaVisual} />
                 <ReportField label="Flete global" value={`${currency} ${shown(numberValue(quote.fleteTotal), quote)}`} />
                 <ReportField label="Seguro global" value={`${currency} ${shown(numberValue(quote.seguroTotal), quote)}`} />
                 <ReportField label="Tipo de cambio" value={`ARS ${money(quote.tipoCambio)}`} />
-                <ReportField label="Notas" value={quote.notas} className="report-field-notes" />
+                {quote.observaciones.trim() && (
+                  <ReportField label="Observaciones" value={quote.observaciones} className="report-field-notes" />
+                )}
+                <ReportField label="Notas" value={APP_NOTES} className="report-field-notes" />
               </div>
             </CardContent>
           </Card>
@@ -747,6 +779,13 @@ export default function App() {
             <Field label="Proveedor" value={quote.proveedor} onChange={(v) => updateQuote({ proveedor: v })} />
             <Field label="Origen" value={quote.origen} onChange={(v) => updateQuote({ origen: v })} />
             <Field label="Destino" value={quote.destino} onChange={(v) => updateQuote({ destino: v })} />
+            <Field label="Volumen m³" type="number" value={quote.volumen} onChange={(v) => updateQuote({ volumen: v })} />
+            <Field
+              label="Peso total con packing kg"
+              type="number"
+              value={quote.pesoTotalPacking}
+              onChange={(v) => updateQuote({ pesoTotalPacking: v })}
+            />
             <div>
               <label className="text-xs font-semibold text-slate-500">Moneda visual</label>
               <select
@@ -762,12 +801,16 @@ export default function App() {
             <Field label="Seguro global USD" type="number" value={quote.seguroTotal} onChange={(v) => updateQuote({ seguroTotal: v })} />
             <Field label="Fecha" type="date" value={quote.fecha} onChange={(v) => updateQuote({ fecha: v })} />
             <div className="notes-field md:col-span-6">
-              <label className="text-xs font-semibold text-slate-500">Notas</label>
+              <label className="text-xs font-semibold text-slate-500">Observaciones</label>
               <textarea
                 className="notes-textarea min-h-16 w-full rounded-md border px-2 py-1 text-sm"
-                value={quote.notas}
-                readOnly
+                value={quote.observaciones}
+                onChange={(e) => updateQuote({ observaciones: e.target.value })}
               />
+            </div>
+            <div className="notes-field md:col-span-6">
+              <label className="text-xs font-semibold text-slate-500">Notas</label>
+              <textarea className="notes-textarea min-h-16 w-full rounded-md border px-2 py-1 text-sm" value={APP_NOTES} readOnly />
             </div>
           </CardContent>
         </Card>
