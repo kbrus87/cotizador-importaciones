@@ -38,6 +38,7 @@ type Quote = {
   proveedor: string;
   origen: string;
   destino: string;
+  logoDataUrl: string;
   monedaBase: "USD";
   monedaVisual: Currency;
   tipoCambio: number | string;
@@ -113,6 +114,7 @@ const defaultQuote = (): Quote => ({
   proveedor: "",
   origen: "China",
   destino: "Argentina",
+  logoDataUrl: "",
   monedaBase: "USD",
   monedaVisual: "USD",
   tipoCambio: 1000,
@@ -162,6 +164,7 @@ function normalizeQuote(data: Partial<Quote>): Quote {
     ...base,
     ...data,
     id: data.id || uid(),
+    logoDataUrl: data.logoDataUrl || "",
     monedaBase: "USD",
     monedaVisual: data.monedaVisual || "USD",
     tipoCambio: data.tipoCambio || 1000,
@@ -572,6 +575,30 @@ export default function App() {
     }
   };
 
+  const loadLogoFile = async (file?: File) => {
+    if (!file) return;
+
+    const isPng = file.type === "image/png" || file.name.toLowerCase().endsWith(".png");
+    if (!isPng) {
+      alert("El logo debe ser un archivo PNG.");
+      return;
+    }
+
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+        reader.onerror = () => reject(new Error("No se pudo leer el archivo."));
+        reader.readAsDataURL(file);
+      });
+
+      if (!dataUrl) throw new Error("No se pudo procesar el logo.");
+      updateQuote({ logoDataUrl: dataUrl });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "No se pudo cargar el logo.");
+    }
+  };
+
   const filteredProducts = productDb.filter((p) => {
     const s = search.toLowerCase();
     return [p.item, p.tipo, p.descripcion].join(" ").toLowerCase().includes(s);
@@ -580,14 +607,18 @@ export default function App() {
   const currency = displayCurrency(quote);
   const printReport = () => window.print();
   const leadingTotalColumns = 3 + (showTipo ? 1 : 0) + (showDescripcion ? 1 : 0) + (showPeso ? 1 : 0);
+  const printLeadingTotalColumns = 3 + (showPeso ? 1 : 0);
   const metaLayoutClass = showTipo && showDescripcion ? "meta-all" : showTipo ? "meta-item-tipo" : showDescripcion ? "meta-item-desc" : "meta-item-only";
 
   return (
     <div className="quote-app min-h-screen bg-slate-50 p-4 text-slate-900 print:bg-white">
       <style>{`
         @media print {
+          @page { size: A4 landscape; margin: 8mm; }
           .no-print { display: none !important; }
           .print-only { display: block !important; }
+          tr.print-only { display: table-row !important; }
+          td.print-only, th.print-only { display: table-cell !important; }
           body { background: white; }
           input, textarea, select { border: none !important; padding: 0 !important; background: transparent !important; appearance: none !important; }
           .print-card { box-shadow: none !important; border: none !important; }
@@ -599,17 +630,35 @@ export default function App() {
 
       <div className="quote-shell mx-auto max-w-[1800px] space-y-4">
         <div className="quote-topbar no-print flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
+          <div className="quote-brand">
+            <div className="quote-brand-logo-wrap">
+              {quote.logoDataUrl ? (
+                <img src={quote.logoDataUrl} alt="Logo de la cotizaciÃ³n" className="quote-brand-logo" />
+              ) : (
+                <div className="quote-brand-placeholder">Sin logo</div>
+              )}
+            </div>
+            <div className="quote-brand-copy">
             <h1 className="text-2xl font-bold tracking-tight">Calculadora de importación</h1>
             <p className="text-sm text-slate-600">
               Los valores base se guardan en USD. La conversión a ARS afecta solo visualización, CSV e impresión.
             </p>
+            </div>
           </div>
 
-          <div className="quote-toolbar flex flex-wrap gap-2">
+          <div className="quote-toolbar no-print flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setShowCurrencyDialog(true)}>
               {currency} / TC {money(quote.tipoCambio)}
             </Button>
+            <label className="inline-flex h-10 cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-100">
+              <FileUp className="mr-2 h-4 w-4" /> Cargar logo PNG
+              <input type="file" accept=".png,image/png" className="hidden" onChange={(e) => loadLogoFile(e.target.files?.[0])} />
+            </label>
+            {quote.logoDataUrl && (
+              <Button variant="outline" onClick={() => updateQuote({ logoDataUrl: "" })}>
+                <Trash2 className="mr-2 h-4 w-4" /> Quitar logo
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setQuote(defaultQuote())}>
               <Plus className="mr-2 h-4 w-4" /> Nueva
             </Button>
@@ -651,7 +700,45 @@ export default function App() {
           </div>
         </div>
 
-        <Card className="quote-form-card print-card">
+        <div className="print-only">
+          <Card className="report-meta-card print-card">
+            <CardContent className="report-meta-content">
+              <div className="report-header">
+                <div className="report-header-brand">
+                  <div className="report-header-logo-wrap">
+                    {quote.logoDataUrl ? (
+                      <img src={quote.logoDataUrl} alt="Logo de la cotizaciÃ³n" className="report-header-logo" />
+                    ) : (
+                      <div className="quote-brand-placeholder report-header-placeholder">Sin logo</div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="report-eyebrow">Informe de cotizaciÃ³n</div>
+                    <h2 className="report-title">{quote.nombre || "CotizaciÃ³n sin nombre"}</h2>
+                  </div>
+                </div>
+                <div className="report-meta-date">
+                  <span className="report-meta-label">Fecha</span>
+                  <strong>{quote.fecha || "-"}</strong>
+                </div>
+              </div>
+
+              <div className="report-meta-grid">
+                <ReportField label="Nombre cotizaciÃ³n" value={quote.nombre} className="report-field-wide" />
+                <ReportField label="Proveedor" value={quote.proveedor} />
+                <ReportField label="Origen" value={quote.origen} />
+                <ReportField label="Destino" value={quote.destino} />
+                <ReportField label="Moneda" value={quote.monedaVisual} />
+                <ReportField label="Flete global" value={`${currency} ${shown(numberValue(quote.fleteTotal), quote)}`} />
+                <ReportField label="Seguro global" value={`${currency} ${shown(numberValue(quote.seguroTotal), quote)}`} />
+                <ReportField label="Tipo de cambio" value={`ARS ${money(quote.tipoCambio)}`} />
+                <ReportField label="Notas" value={quote.notas} className="report-field-notes" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="quote-form-card print-card no-print">
           <CardContent className="quote-form-grid grid grid-cols-1 gap-3 p-4 md:grid-cols-6">
             <Field label="Nombre cotización" value={quote.nombre} onChange={(v) => updateQuote({ nombre: v })} className="md:col-span-2" />
             <Field label="Proveedor" value={quote.proveedor} onChange={(v) => updateQuote({ proveedor: v })} />
@@ -708,23 +795,23 @@ export default function App() {
                   <thead>
                     <tr className="bg-slate-100 text-left">
                       <Th className="item-col">Item</Th>
-                      {showTipo && <Th className="type-col">Tipo</Th>}
-                      {showDescripcion && <Th className="desc-col">Descripci??n</Th>}
+                      {showTipo && <Th className="type-col print-meta-col">Tipo</Th>}
+                      {showDescripcion && <Th className="desc-col print-meta-col">Descripci??n</Th>}
                       {showPeso && <Th className="weight-col">Peso kg</Th>}
-                      <Th>Cant.</Th>
-                      <Th>EXW unit. USD</Th>
-                      <Th>Flete</Th>
-                      <Th>Seguro</Th>
-                      <Th>CIF {currency}</Th>
-                      <Th>DIE</Th>
-                      <Th>TE</Th>
-                      <Th>Base IVA {currency}</Th>
-                      <Th>IVA</Th>
-                      <Th>IVA ad.</Th>
-                      <Th>Gan.</Th>
-                      <Th>IIBB</Th>
-                      <Th>Total {currency}</Th>
-                      <Th>Unit. final {currency}</Th>
+                      <Th className="col-qty">Cant.</Th>
+                      <Th className="col-money">EXW unit. USD</Th>
+                      <Th className="col-money">Flete</Th>
+                      <Th className="col-money">Seguro</Th>
+                      <Th className="col-money">CIF {currency}</Th>
+                      <Th className="col-tax">DIE</Th>
+                      <Th className="col-tax">TE</Th>
+                      <Th className="col-money">Base IVA {currency}</Th>
+                      <Th className="col-tax">IVA</Th>
+                      <Th className="col-tax">IVA ad.</Th>
+                      <Th className="col-tax">Gan.</Th>
+                      <Th className="col-tax">IIBB</Th>
+                      <Th className="col-total">Total {currency}</Th>
+                      <Th className="col-total">Unit. final {currency}</Th>
                     </tr>
                   </thead>
 
@@ -736,7 +823,12 @@ export default function App() {
                         <tr key={row.id} className="group align-top hover:bg-slate-50">
                           <Td className="item-col">
                             <div className="item-cell">
-                              <CellInput value={row.item} onChange={(v) => updateItem(row.id, "item", v)} className="w-40" />
+                              <CellInput value={row.item} onChange={(v) => updateItem(row.id, "item", v)} className="w-40 no-print" />
+                              <div className="print-only print-item-stack">
+                                <strong className="print-item-title">{row.item || "-"}</strong>
+                                {showTipo && row.tipo && <span className="print-item-meta">Tipo: {row.tipo}</span>}
+                                {showDescripcion && row.descripcion && <span className="print-item-meta">{row.descripcion}</span>}
+                              </div>
                               <div className="item-cell-actions no-print">
                                 <Button size="sm" variant="outline" title="Guardar/sobrescribir este item en la base" onClick={() => saveProduct(row)}>
                                   <Save className="h-4 w-4" />
@@ -751,12 +843,12 @@ export default function App() {
                             </div>
                           </Td>
                           {showTipo && (
-                            <Td className="type-col">
+                            <Td className="type-col print-meta-col">
                               <CellInput value={row.tipo} onChange={(v) => updateItem(row.id, "tipo", v)} className="w-32" />
                             </Td>
                           )}
                           {showDescripcion && (
-                            <Td className="desc-col">
+                            <Td className="desc-col print-meta-col">
                               <CellInput value={row.descripcion} onChange={(v) => updateItem(row.id, "descripcion", v)} className="w-72" />
                             </Td>
                           )}
@@ -765,52 +857,52 @@ export default function App() {
                               <CellInput type="number" value={row.peso} onChange={(v) => updateItem(row.id, "peso", v)} className="w-20" />
                             </Td>
                           )}
-                          <Td>
+                          <Td className="col-qty">
                             <CellInput type="number" value={row.cantidad} onChange={(v) => updateItem(row.id, "cantidad", v)} className="w-20" />
                           </Td>
-                          <Td>
+                          <Td className="col-money">
                             <CellInput type="number" value={row.precioExw} onChange={(v) => updateItem(row.id, "precioExw", v)} className="w-24" />
                           </Td>
-                          <Td className="font-medium">{shown(c.flete, quote)}</Td>
-                          <Td className="font-medium">{shown(c.seguro, quote)}</Td>
-                          <Td className="font-medium">{shown(c.cif, quote)}</Td>
-                          <Td>
+                          <Td className="col-money font-medium">{shown(c.flete, quote)}</Td>
+                          <Td className="col-money font-medium">{shown(c.seguro, quote)}</Td>
+                          <Td className="col-money font-medium">{shown(c.cif, quote)}</Td>
+                          <Td className="col-tax">
                             <TaxCell
                               pctValue={row.derechoImportacionPct}
                               amount={shown(c.derechoImportacion, quote)}
                               onChange={(v) => updateItem(row.id, "derechoImportacionPct", v)}
                             />
                           </Td>
-                          <Td>
+                          <Td className="col-tax">
                             <TaxCell
                               pctValue={row.tasaEstadisticaPct}
                               amount={shown(c.tasaEstadistica, quote)}
                               onChange={(v) => updateItem(row.id, "tasaEstadisticaPct", v)}
                             />
                           </Td>
-                          <Td className="font-medium">{shown(c.baseIva, quote)}</Td>
-                          <Td>
+                          <Td className="col-money font-medium">{shown(c.baseIva, quote)}</Td>
+                          <Td className="col-tax">
                             <TaxCell pctValue={row.ivaPct} amount={shown(c.iva, quote)} onChange={(v) => updateItem(row.id, "ivaPct", v)} />
                           </Td>
-                          <Td>
+                          <Td className="col-tax">
                             <TaxCell
                               pctValue={row.ivaAdicionalPct}
                               amount={shown(c.ivaAdicional, quote)}
                               onChange={(v) => updateItem(row.id, "ivaAdicionalPct", v)}
                             />
                           </Td>
-                          <Td>
+                          <Td className="col-tax">
                             <TaxCell
                               pctValue={row.gananciasPct}
                               amount={shown(c.ganancias, quote)}
                               onChange={(v) => updateItem(row.id, "gananciasPct", v)}
                             />
                           </Td>
-                          <Td>
+                          <Td className="col-tax">
                             <TaxCell pctValue={row.iibbPct} amount={shown(c.iibb, quote)} onChange={(v) => updateItem(row.id, "iibbPct", v)} />
                           </Td>
-                          <Td className="font-bold">{shown(c.total, quote)}</Td>
-                          <Td className="font-bold">{shown(c.unitario, quote)}</Td>
+                          <Td className="col-total font-bold">{shown(c.total, quote)}</Td>
+                          <Td className="col-total font-bold">{shown(c.unitario, quote)}</Td>
 
                         </tr>
                       );
@@ -818,8 +910,23 @@ export default function App() {
                   </tbody>
 
                   <tfoot>
-                    <tr className="bg-slate-100 font-bold">
+                    <tr className="bg-slate-100 font-bold no-print">
                       <Td colSpan={leadingTotalColumns}>Totales</Td>
+                      <Td>{shown(totals.flete, quote)}</Td>
+                      <Td>{shown(totals.seguro, quote)}</Td>
+                      <Td>{shown(totals.cif, quote)}</Td>
+                      <Td>{shown(totals.derechoImportacion, quote)}</Td>
+                      <Td>{shown(totals.tasaEstadistica, quote)}</Td>
+                      <Td>{shown(totals.baseIva, quote)}</Td>
+                      <Td>{shown(totals.iva, quote)}</Td>
+                      <Td>{shown(totals.ivaAdicional, quote)}</Td>
+                      <Td>{shown(totals.ganancias, quote)}</Td>
+                      <Td>{shown(totals.iibb, quote)}</Td>
+                      <Td>{shown(totals.total, quote)}</Td>
+                      <Td></Td>
+                    </tr>
+                    <tr className="bg-slate-100 font-bold print-only">
+                      <Td colSpan={printLeadingTotalColumns}>Totales</Td>
                       <Td>{shown(totals.flete, quote)}</Td>
                       <Td>{shown(totals.seguro, quote)}</Td>
                       <Td>{shown(totals.cif, quote)}</Td>
@@ -853,6 +960,30 @@ export default function App() {
               </div>
             </CardContent>
           </Card>
+
+          <div className="print-only">
+            <Card className="report-summary-card print-card">
+              <CardContent className="report-summary-grid">
+                <Summary label="EXW total" value={shown(totals.exwTotal, quote)} moneda={currency} />
+                <Summary label="Flete" value={shown(totals.flete, quote)} moneda={currency} />
+                <Summary label="Seguro" value={shown(totals.seguro, quote)} moneda={currency} />
+                <Summary label="CIF" value={shown(totals.cif, quote)} moneda={currency} />
+                <Summary label="Derecho importaciÃ³n" value={shown(totals.derechoImportacion, quote)} moneda={currency} />
+                <Summary label="Tasa estadÃ­stica" value={shown(totals.tasaEstadistica, quote)} moneda={currency} />
+                <Summary label="Base IVA/percepciones" value={shown(totals.baseIva, quote)} moneda={currency} />
+                <Summary label="IVA" value={shown(totals.iva, quote)} moneda={currency} />
+                <Summary label="IVA adicional" value={shown(totals.ivaAdicional, quote)} moneda={currency} />
+                <Summary label="Ganancias" value={shown(totals.ganancias, quote)} moneda={currency} />
+                <Summary label="IIBB" value={shown(totals.iibb, quote)} moneda={currency} />
+                <div className="report-total-pill">
+                  <span>Total</span>
+                  <strong>
+                    {currency} {shown(totals.total, quote)}
+                  </strong>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           <aside className="quote-sidebar no-print space-y-4">
             <Card className="quote-db-card">
@@ -1021,6 +1152,25 @@ function Field({
   );
 }
 
+function ReportField({
+  label,
+  value,
+  className = "",
+}: {
+  label: string;
+  value: string | number;
+  className?: string;
+}) {
+  const hasValue = value !== "" && value !== null && value !== undefined;
+
+  return (
+    <div className={`report-field ${className}`.trim()}>
+      <span className="report-field-label">{label}</span>
+      <strong className="report-field-value">{hasValue ? value : "-"}</strong>
+    </div>
+  );
+}
+
 function CellInput({
   value,
   onChange,
@@ -1054,11 +1204,15 @@ function TaxCell({
 }) {
   return (
     <div className="tax-cell">
-      <div className="tax-input-row">
+      <div className="tax-input-row no-print">
         <span className="tax-prefix">%</span>
         <CellInput type="number" value={pctValue} onChange={onChange} className="tax-input" />
       </div>
-      <div className="tax-amount">$ {amount}</div>
+      <div className="tax-amount no-print">$ {amount}</div>
+      <div className="print-only print-tax-cell">
+        <span className="print-tax-pct">% {pctValue || 0}</span>
+        <span className="print-tax-amount">$ {amount}</span>
+      </div>
     </div>
   );
 }
