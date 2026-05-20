@@ -799,13 +799,13 @@ export default function App() {
                       {showDescripcion && <Th className="desc-col print-meta-col">Descripci??n</Th>}
                       {showPeso && <Th className="weight-col">Peso kg</Th>}
                       <Th className="col-qty">Cant.</Th>
-                      <Th className="col-money">EXW unit. USD</Th>
+                      <Th className="col-money">EXW</Th>
                       <Th className="col-money">Flete</Th>
                       <Th className="col-money">Seguro</Th>
-                      <Th className="col-money">CIF {currency}</Th>
+                      <Th className="col-money">CIF</Th>
                       <Th className="col-tax">DIE</Th>
                       <Th className="col-tax">TE</Th>
-                      <Th className="col-money">Base IVA {currency}</Th>
+                      <Th className="col-money">Base IVA</Th>
                       <Th className="col-tax">IVA</Th>
                       <Th className="col-tax">IVA ad.</Th>
                       <Th className="col-tax">Gan.</Th>

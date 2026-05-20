@@ -1261,6 +1261,7 @@ body {
   }
 
   .quote-table {
+     min-width: 95vw;
     table-layout: fixed;
     width: 100%;
   }
@@ -1279,6 +1280,11 @@ body {
     padding: 3px 2px;
   }
 
+  .quote-table .table-body-cell:last-child,
+  .quote-table .table-head-cell:last-child {
+    min-width: 0;
+  }
+
   .quote-table .cell-input {
     min-height: 16px;
     padding: 0;
@@ -1288,12 +1294,15 @@ body {
     display: none;
   }
 
-  .quote-table .item-col {
-    width: 16%;
-    max-width: 16%;
-    min-width: 16%;
+  .quote-table .item-col,
+  .quote-table.meta-all .item-col,
+  .quote-table.meta-item-tipo .item-col,
+  .quote-table.meta-item-desc .item-col,
+  .quote-table.meta-item-only .item-col {
+    width: 14%;
+    max-width: 14%;
+    min-width: 14%;
     white-space: normal;
-    background-color: red;
   }
 
   .quote-table .weight-col,
@@ -1305,23 +1314,23 @@ body {
   }
 
   .quote-table .col-money {
-    width: 6%;
-    min-width: 6%;
-    max-width: 6%;
+    width: 3%;
+    min-width: 3%;
+    max-width: 3%;
     white-space: nowrap;
   }
 
   .quote-table .col-tax {
-    width: 4%;
-    min-width: 4%;
-    max-width: 4%;
+    width: 3%;
+    min-width: 3%;
+    max-width: 3%;
     white-space: nowrap;
   }
 
   .quote-table .col-total {
-    width: 7%;
-    min-width: 7%;
-    max-width: 7%;
+    width:4%;
+    min-width:4%;
+    max-width:4%;
     white-space: nowrap;
   }
 
