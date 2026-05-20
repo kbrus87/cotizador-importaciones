@@ -872,8 +872,8 @@ export default function App() {
                               <CellInput value={row.item} onChange={(v) => updateItem(row.id, "item", v)} className="w-40 no-print" />
                               <div className="print-only print-item-stack">
                                 <strong className="print-item-title">{row.item || "-"}</strong>
-                                {showTipo && row.tipo && <span className="print-item-meta">Tipo: {row.tipo}</span>}
-                                {showDescripcion && row.descripcion && <span className="print-item-meta">{row.descripcion}</span>}
+                                {row.tipo && <span className="print-item-type">{row.tipo}</span>}
+                                {row.descripcion && <span className="print-item-meta">{row.descripcion}</span>}
                               </div>
                               <div className="item-cell-actions no-print">
                                 <Button size="sm" variant="outline" title="Guardar/sobrescribir este item en la base" onClick={() => saveProduct(row)}>
@@ -1009,7 +1009,13 @@ export default function App() {
 
           <div className="print-only">
             <Card className="report-summary-card print-card">
-              <CardContent className="report-summary-grid">
+              <CardContent className="report-summary-content">
+                <div className="report-summary-block">
+                  <div className="report-summary-head">
+                    <h2 className="report-summary-title">Resumen</h2>
+                    <span className="report-summary-currency">{currency}</span>
+                  </div>
+                  <div className="report-summary-grid">
                 <Summary label="EXW total" value={shown(totals.exwTotal, quote)} moneda={currency} />
                 <Summary label="Flete" value={shown(totals.flete, quote)} moneda={currency} />
                 <Summary label="Seguro" value={shown(totals.seguro, quote)} moneda={currency} />
@@ -1026,6 +1032,8 @@ export default function App() {
                   <strong>
                     {currency} {shown(totals.total, quote)}
                   </strong>
+                </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>

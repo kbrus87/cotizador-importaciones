@@ -129,8 +129,41 @@ body {
 }
 
 .report-meta-content,
+.report-summary-content,
 .report-summary-grid {
   padding: 24px;
+}
+
+.report-summary-block {
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 253, 249, 0.96), rgba(247, 241, 227, 0.92));
+  overflow: hidden;
+}
+
+.report-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(242, 234, 219, 0.55);
+}
+
+.report-summary-title {
+  margin: 0;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+}
+
+.report-summary-currency {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .report-header {
@@ -215,26 +248,39 @@ body {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px 18px;
   align-items: stretch;
+  padding: 18px 20px;
 }
 
 .report-summary-grid .summary-row {
   margin: 0;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: rgba(255, 253, 249, 0.92);
+  padding: 10px 0;
+  border-bottom: 1px dashed rgba(83, 59, 38, 0.14);
+  border-radius: 0;
+  background: transparent;
 }
 
 .report-total-pill {
-  grid-column: span 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin: 0 20px 18px;
   padding: 16px 18px;
-  border-radius: 18px;
+  border-top: 1px solid rgba(15, 118, 110, 0.14);
+  border-radius: 0 0 18px 18px;
   background: linear-gradient(135deg, rgba(15, 118, 110, 0.1), rgba(17, 94, 89, 0.18));
-  border: 1px solid rgba(15, 118, 110, 0.18);
   font-size: 1.05rem;
+}
+
+.report-summary-block .summary-label {
+  font-size: 0.82rem;
+}
+
+.report-summary-block .summary-value {
+  font-size: 0.88rem;
+}
+
+.report-summary-block .summary-row:last-child {
+  border-bottom: 1px dashed rgba(83, 59, 38, 0.14);
 }
 
 .quote-toolbar {
@@ -1215,6 +1261,7 @@ body {
   }
 
   .report-meta-content,
+  .report-summary-content,
   .report-summary-grid,
   .quote-table-card .ui-card-content {
     padding: 0;
@@ -1248,6 +1295,22 @@ body {
   .quote-main-grid,
   .report-summary-grid {
     gap: 10px;
+  }
+
+  .report-summary-block {
+    border-radius: 12px;
+  }
+
+  .report-summary-head {
+    padding: 10px 12px;
+  }
+
+  .report-summary-title {
+    font-size: 1rem;
+  }
+
+  .report-summary-currency {
+    font-size: 0.6rem;
   }
 
   .quote-table-card {
@@ -1396,34 +1459,48 @@ body {
     max-width: 100%;
   }
 
-  .print-item-title {
-    font-size: 0.54rem;
-    line-height: 1.1;
-    max-width: 100%;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-  }
+.print-item-title {
+  display: block;
+  font-size: 0.54rem;
+  line-height: 1.1;
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
 
-  .print-item-meta {
-    font-size: 0.44rem;
-    line-height: 1.1;
-    color: var(--muted);
-    max-width: 100%;
-    word-break: break-word;
-    overflow-wrap: anywhere;
+.print-item-type {
+  display: block;
+  font-size: 0.46rem;
+  line-height: 1.1;
+  font-style: italic;
+  color: var(--muted);
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.print-item-meta {
+  display: block;
+  font-size: 0.44rem;
+  line-height: 1.1;
+  color: var(--text);
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: anywhere;
   }
 
   .report-summary-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .report-summary-grid .summary-row,
-  .report-total-pill {
     padding: 10px 12px;
-    border-radius: 12px;
+  }
+
+  .report-summary-grid .summary-row {
+    padding: 6px 0;
   }
 
   .report-total-pill {
-    grid-column: span 2;
+    margin: 0 12px 12px;
+    padding: 10px 12px;
+    border-radius: 0 0 12px 12px;
   }
 }
