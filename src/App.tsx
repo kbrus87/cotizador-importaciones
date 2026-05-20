@@ -122,7 +122,10 @@ const defaultQuote = (): Quote => ({
   seguroTotal: 0,
   fecha: new Date().toISOString().slice(0, 10),
   notas:
-    "Base de cálculo: CIF = EXW + flete internacional + seguro. Derecho de importación y tasa estadística sobre CIF. IVA, IVA adicional, Ganancias e IIBB sobre CIF + Derecho de Importación + Tasa Estadística.",
+    `Base de cálculo: CIF = EXW + flete internacional + seguro. 
+    Derecho de importación y tasa estadística sobre CIF. 
+    Base IVA = CIF + Derecho de Importación + Tasa Estadística
+    IVA, IVA adicional, Ganancias e IIBB sobre Base IVA`,
   items: [emptyItem()],
 });
 
